@@ -5,9 +5,6 @@ use std::{
 };
 
 fn handle_connection(mut stream: TcpStream) -> std::io::Result<()> {
-    let mut buffer = String::new();
-    stream.read_to_string(&mut buffer)?;
-
     let message_size: i32 = 0;
     let correlation_id: i32 = 7;
     stream.write_all(&message_size.to_be_bytes())?;
