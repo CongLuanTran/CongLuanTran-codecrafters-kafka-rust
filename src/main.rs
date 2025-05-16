@@ -89,7 +89,6 @@ fn handle_connection(mut stream: TcpStream) -> std::io::Result<()> {
     let request = parse_request(msg_buf).unwrap();
 
     // Send response, this is very unstructured for now, will be refactored later
-    let message_size: i32 = 0;
     let correlation_id: i32 = request.correlation_id;
 
     let response_header = ResponseHeader { correlation_id };
@@ -106,9 +105,11 @@ fn handle_connection(mut stream: TcpStream) -> std::io::Result<()> {
         body: response_body,
     };
 
+    let payload = response.to_be_bytes();
+    let message_size: i32 = payload.len() as i32;
     stream.write_all(&message_size.to_be_bytes())?;
     if request.request_api_key == 18 {
-        stream.write_all(&response.to_be_bytes())?;
+        stream.write_all(&payload)?;
     }
     Ok(())
 }
