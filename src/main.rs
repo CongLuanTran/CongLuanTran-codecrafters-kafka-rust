@@ -46,7 +46,7 @@ impl ApiVersionResponse {
     fn to_be_bytes(&self) -> Vec<u8> {
         let mut buf = Vec::new();
         buf.extend(self.error_code.to_be_bytes());
-        buf.extend((self.api_keys.len() as i32).to_be_bytes());
+        buf.extend((self.api_keys.len() as i32 + 1).to_be_bytes());
         for api_key in &self.api_keys {
             buf.extend(api_key.to_be_bytes());
         }
