@@ -6,7 +6,7 @@ use std::{
 };
 
 #[derive(Debug)]
-struct Request {
+struct RequestHeader {
     request_api_key: i16,
     request_api_version: i16,
     correlation_id: i32,
@@ -15,7 +15,7 @@ struct Request {
 }
 
 #[derive(Debug)]
-struct Response {
+struct ResponseHeader {
     correlation_id: i32,
 }
 
@@ -36,10 +36,14 @@ fn handle_connection(mut stream: TcpStream) -> std::io::Result<()> {
     let correlation_id: i32 = request.correlation_id;
     stream.write_all(&message_size.to_be_bytes())?;
     stream.write_all(&correlation_id.to_be_bytes())?;
+    if request.request_api_key == 18 {
+        let error_code: i16 = 35;
+        stream.write_all(&error_code.to_be_bytes())?;
+    }
     Ok(())
 }
 
-fn parse_request(msg_buf: Vec<u8>) -> std::io::Result<Request> {
+fn parse_request(msg_buf: Vec<u8>) -> std::io::Result<RequestHeader> {
     // Initialize an offset, this will be incremented after the reading of each field
     let mut offset = 0;
 
@@ -76,7 +80,7 @@ fn parse_request(msg_buf: Vec<u8>) -> std::io::Result<Request> {
     // For now, don't care about parsing the tag buffer
     let tag_buffer = msg_buf[offset..].to_vec();
 
-    Ok(Request {
+    Ok(RequestHeader {
         request_api_key,
         request_api_version,
         correlation_id,
