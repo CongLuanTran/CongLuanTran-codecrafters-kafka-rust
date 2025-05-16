@@ -30,6 +30,7 @@ struct ApiVersion {
     api_key: i16,
     min_version: i16,
     max_version: i16,
+    tag_buffer: Vec<u8>,
 }
 
 impl ApiVersion {
@@ -125,6 +126,7 @@ fn handle_connection(mut stream: TcpStream) -> std::io::Result<()> {
             api_key: 18,
             min_version: 0,
             max_version: 4,
+            tag_buffer: encode_unsigned_varint(0),
         }],
     };
     let response = Response {
