@@ -32,6 +32,7 @@ fn handle_connection(mut stream: TcpStream) -> std::io::Result<()> {
     // Parse the request
     let request = parse_request(msg_buf).unwrap();
 
+    // Send response, this is very unstructured for now, will be refactored later
     let message_size: i32 = 0;
     let correlation_id: i32 = request.correlation_id;
     stream.write_all(&message_size.to_be_bytes())?;
