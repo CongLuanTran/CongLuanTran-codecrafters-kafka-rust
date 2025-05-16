@@ -19,6 +19,62 @@ struct ResponseHeader {
     correlation_id: i32,
 }
 
+#[derive(Debug)]
+struct ApiVersionResponse {
+    error_code: i16,
+    api_keys: Vec<ApiVersion>,
+}
+
+#[derive(Debug)]
+struct ApiVersion {
+    api_key: i16,
+    min_version: i16,
+    max_version: i16,
+}
+
+impl ApiVersion {
+    fn to_be_bytes(&self) -> Vec<u8> {
+        let mut buf = Vec::new();
+        buf.extend(self.api_key.to_be_bytes());
+        buf.extend(self.min_version.to_be_bytes());
+        buf.extend(self.max_version.to_be_bytes());
+        buf
+    }
+}
+
+impl ApiVersionResponse {
+    fn to_be_bytes(&self) -> Vec<u8> {
+        let mut buf = Vec::new();
+        buf.extend(self.error_code.to_be_bytes());
+        buf.extend((self.api_keys.len() as i32).to_be_bytes());
+        for api_key in &self.api_keys {
+            buf.extend(api_key.to_be_bytes());
+        }
+        buf
+    }
+}
+
+impl ResponseHeader {
+    fn to_be_bytes(&self) -> [u8; 4] {
+        self.correlation_id.to_be_bytes()
+    }
+}
+
+#[derive(Debug)]
+struct Response {
+    header: ResponseHeader,
+    body: ApiVersionResponse,
+}
+
+impl Response {
+    fn to_be_bytes(&self) -> Vec<u8> {
+        let mut buf = Vec::new();
+        buf.extend(self.header.to_be_bytes());
+        buf.extend(self.body.to_be_bytes());
+        buf
+    }
+}
+
 fn handle_connection(mut stream: TcpStream) -> std::io::Result<()> {
     // First read the message size
     let mut size_buf = [0; 4];
@@ -35,11 +91,24 @@ fn handle_connection(mut stream: TcpStream) -> std::io::Result<()> {
     // Send response, this is very unstructured for now, will be refactored later
     let message_size: i32 = 0;
     let correlation_id: i32 = request.correlation_id;
+
+    let response_header = ResponseHeader { correlation_id };
+    let response_body = ApiVersionResponse {
+        error_code: 0,
+        api_keys: vec![ApiVersion {
+            api_key: 18,
+            min_version: 0,
+            max_version: 4,
+        }],
+    };
+    let response = Response {
+        header: response_header,
+        body: response_body,
+    };
+
     stream.write_all(&message_size.to_be_bytes())?;
-    stream.write_all(&correlation_id.to_be_bytes())?;
     if request.request_api_key == 18 {
-        let error_code: i16 = 35;
-        stream.write_all(&error_code.to_be_bytes())?;
+        stream.write_all(&response.to_be_bytes())?;
     }
     Ok(())
 }
