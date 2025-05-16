@@ -30,7 +30,7 @@ struct ApiVersion {
     api_key: i16,
     min_version: i16,
     max_version: i16,
-    tag_buffer: Vec<u8>,
+    tag_buffer: Option<Vec<u8>>,
 }
 
 impl ApiVersion {
@@ -39,6 +39,15 @@ impl ApiVersion {
         buf.extend(self.api_key.to_be_bytes());
         buf.extend(self.min_version.to_be_bytes());
         buf.extend(self.max_version.to_be_bytes());
+        match &self.tag_buffer {
+            Some(bytes) => {
+                buf.extend(encode_unsigned_varint(bytes.len() as u32 + 1));
+                buf.extend(bytes);
+            }
+            None => {
+                buf.extend(encode_unsigned_varint(0));
+            }
+        };
         buf
     }
 }
@@ -126,7 +135,7 @@ fn handle_connection(mut stream: TcpStream) -> std::io::Result<()> {
             api_key: 18,
             min_version: 0,
             max_version: 4,
-            tag_buffer: encode_unsigned_varint(0),
+            tag_buffer: None,
         }],
     };
     let response = Response {
