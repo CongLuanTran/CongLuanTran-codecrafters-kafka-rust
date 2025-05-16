@@ -46,7 +46,7 @@ impl ApiVersionResponse {
     fn to_be_bytes(&self) -> Vec<u8> {
         let mut buf = Vec::new();
         buf.extend(self.error_code.to_be_bytes());
-        buf.extend((self.api_keys.len() as i32 + 1).to_be_bytes());
+        buf.extend(encode_unsigned_varint(self.api_keys.len() as u32 + 1));
         for api_key in &self.api_keys {
             buf.extend(api_key.to_be_bytes());
         }
@@ -73,6 +73,33 @@ impl Response {
         buf.extend(self.body.to_be_bytes());
         buf
     }
+}
+
+fn encode_unsigned_varint(mut value: u32) -> Vec<u8> {
+    let mut buff = Vec::new();
+    loop {
+        if value & !0x7F == 0 {
+            buff.push(value as u8);
+            return buff;
+        } else {
+            buff.push(((value & 0x7F) | 0x80) as u8);
+            value >>= 7;
+        }
+    }
+}
+
+fn decode_unsigned_varint(bytes: Vec<u8>) -> (u32, usize) {
+    let mut result: u32 = 0;
+    let mut shift = 0;
+    for (i, byte) in bytes.iter().enumerate() {
+        let value = (byte & 0x7F) as u32;
+        result |= value << shift;
+        if byte & 0x80 == 0 {
+            return (result, i + 1);
+        }
+        shift += 7;
+    }
+    (result, 0)
 }
 
 fn handle_connection(mut stream: TcpStream) -> std::io::Result<()> {
