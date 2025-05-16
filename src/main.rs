@@ -5,12 +5,18 @@ use std::{
     net::{TcpListener, TcpStream},
 };
 
+#[derive(Debug)]
 struct Request {
     request_api_key: i16,
     request_api_version: i16,
     correlation_id: i32,
     client_id: Option<String>,
     tag_buffer: Vec<u8>,
+}
+
+#[derive(Debug)]
+struct Response {
+    correlation_id: i32,
 }
 
 fn handle_connection(mut stream: TcpStream) -> std::io::Result<()> {
