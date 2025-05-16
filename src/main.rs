@@ -24,6 +24,7 @@ struct ApiVersionResponse {
     error_code: i16,
     api_keys: Vec<ApiVersion>,
     throttle_time_ms: i32,
+    tag_buffer: Option<Vec<u8>>,
 }
 
 #[derive(Debug)]
@@ -62,6 +63,15 @@ impl ApiVersionResponse {
             buf.extend(api_key.to_be_bytes());
         }
         buf.extend(self.throttle_time_ms.to_be_bytes());
+        match &self.tag_buffer {
+            Some(bytes) => {
+                buf.extend(encode_unsigned_varint(bytes.len() as u32 + 1));
+                buf.extend(bytes);
+            }
+            None => {
+                buf.extend(encode_unsigned_varint(0));
+            }
+        };
         buf
     }
 }
@@ -140,6 +150,7 @@ fn handle_connection(mut stream: TcpStream) -> std::io::Result<()> {
             tag_buffer: None,
         }],
         throttle_time_ms: 0,
+        tag_buffer: None,
     };
     let response = Response {
         header: response_header,
