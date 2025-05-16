@@ -140,27 +140,35 @@ fn handle_connection(mut stream: TcpStream) -> std::io::Result<()> {
     // Send response, this is very unstructured for now, will be refactored later
     let correlation_id: i32 = request.correlation_id;
 
-    let response_header = ResponseHeader { correlation_id };
-    let response_body = ApiVersionResponse {
-        error_code: 0,
-        api_keys: vec![ApiVersion {
-            api_key: 18,
-            min_version: 0,
-            max_version: 4,
-            tag_buffer: None,
-        }],
-        throttle_time_ms: 0,
-        tag_buffer: None,
-    };
-    let response = Response {
-        header: response_header,
-        body: response_body,
-    };
-
-    let payload = response.to_be_bytes();
-    let message_size: i32 = payload.len() as i32;
-    stream.write_all(&message_size.to_be_bytes())?;
     if request.request_api_key == 18 {
+        let response_header = ResponseHeader { correlation_id };
+        let (error_code, api_keys) = match request.request_api_version {
+            0..=4 => (
+                0,
+                vec![ApiVersion {
+                    api_key: 18,
+                    min_version: 0,
+                    max_version: 4,
+                    tag_buffer: None,
+                }],
+            ),
+            _ => (35, vec![]),
+        };
+
+        let response_body = ApiVersionResponse {
+            error_code,
+            api_keys,
+            throttle_time_ms: 0,
+            tag_buffer: None,
+        };
+        let response = Response {
+            header: response_header,
+            body: response_body,
+        };
+
+        let payload = response.to_be_bytes();
+        let message_size: i32 = payload.len() as i32;
+        stream.write_all(&message_size.to_be_bytes())?;
         stream.write_all(&payload)?;
     }
     Ok(())
