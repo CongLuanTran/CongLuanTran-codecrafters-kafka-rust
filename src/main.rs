@@ -1,128 +1,14 @@
 #![allow(unused_imports)]
-#![allow(dead_code)]
 use std::{
     io::{Read, Write},
     net::{TcpListener, TcpStream},
 };
 
-#[derive(Debug)]
-struct RequestHeader {
-    request_api_key: i16,
-    request_api_version: i16,
-    correlation_id: i32,
-    client_id: Option<String>,
-    tag_buffer: Vec<u8>,
-}
-
-#[derive(Debug)]
-struct ResponseHeader {
-    correlation_id: i32,
-}
-
-#[derive(Debug)]
-struct ApiVersionResponse {
-    error_code: i16,
-    api_keys: Vec<ApiVersion>,
-    throttle_time_ms: i32,
-    tag_buffer: Option<Vec<u8>>,
-}
-
-#[derive(Debug)]
-struct ApiVersion {
-    api_key: i16,
-    min_version: i16,
-    max_version: i16,
-    tag_buffer: Option<Vec<u8>>,
-}
-
-impl ApiVersion {
-    fn to_be_bytes(&self) -> Vec<u8> {
-        let mut buf = Vec::new();
-        buf.extend(self.api_key.to_be_bytes());
-        buf.extend(self.min_version.to_be_bytes());
-        buf.extend(self.max_version.to_be_bytes());
-        match &self.tag_buffer {
-            Some(bytes) => {
-                buf.extend(encode_unsigned_varint(bytes.len() as u32 + 1));
-                buf.extend(bytes);
-            }
-            None => {
-                buf.extend(encode_unsigned_varint(0));
-            }
-        };
-        buf
-    }
-}
-
-impl ApiVersionResponse {
-    fn to_be_bytes(&self) -> Vec<u8> {
-        let mut buf = Vec::new();
-        buf.extend(self.error_code.to_be_bytes());
-        buf.extend(encode_unsigned_varint(self.api_keys.len() as u32 + 1));
-        for api_key in &self.api_keys {
-            buf.extend(api_key.to_be_bytes());
-        }
-        buf.extend(self.throttle_time_ms.to_be_bytes());
-        match &self.tag_buffer {
-            Some(bytes) => {
-                buf.extend(encode_unsigned_varint(bytes.len() as u32 + 1));
-                buf.extend(bytes);
-            }
-            None => {
-                buf.extend(encode_unsigned_varint(0));
-            }
-        };
-        buf
-    }
-}
-
-impl ResponseHeader {
-    fn to_be_bytes(&self) -> [u8; 4] {
-        self.correlation_id.to_be_bytes()
-    }
-}
-
-#[derive(Debug)]
-struct Response {
-    header: ResponseHeader,
-    body: ApiVersionResponse,
-}
-
-impl Response {
-    fn to_be_bytes(&self) -> Vec<u8> {
-        let mut buf = Vec::new();
-        buf.extend(self.header.to_be_bytes());
-        buf.extend(self.body.to_be_bytes());
-        buf
-    }
-}
-
-fn encode_unsigned_varint(mut value: u32) -> Vec<u8> {
-    let mut buff = Vec::new();
-    loop {
-        if value & !0x7F == 0 {
-            buff.push(value as u8);
-            return buff;
-        } else {
-            buff.push(((value & 0x7F) | 0x80) as u8);
-            value >>= 7;
-        }
-    }
-}
-
-fn decode_unsigned_varint(bytes: Vec<u8>) -> (u32, usize) {
-    let mut result: u32 = 0;
-    let mut shift = 0;
-    for (i, byte) in bytes.iter().enumerate() {
-        let value = (byte & 0x7F) as u32;
-        result |= value << shift;
-        if byte & 0x80 == 0 {
-            return (result, i + 1);
-        }
-        shift += 7;
-    }
-    (result, 0)
-}
+use codecrafters_kafka::protocol::{
+    apiversion::{ApiVersion, ApiVersionResponse},
+    header::{RequestHeader, ResponseHeader},
+    response::Response,
+};
 
 fn handle_connection(mut stream: TcpStream) -> std::io::Result<()> {
     // First read the message size
@@ -135,7 +21,7 @@ fn handle_connection(mut stream: TcpStream) -> std::io::Result<()> {
     stream.read_exact(&mut msg_buf)?;
 
     // Parse the request
-    let request = parse_request(msg_buf).unwrap();
+    let request = RequestHeader::parse_header(msg_buf).unwrap();
 
     // Send response, this is very unstructured for now, will be refactored later
     let correlation_id: i32 = request.correlation_id;
@@ -172,52 +58,6 @@ fn handle_connection(mut stream: TcpStream) -> std::io::Result<()> {
         stream.write_all(&payload)?;
     }
     Ok(())
-}
-
-fn parse_request(msg_buf: Vec<u8>) -> std::io::Result<RequestHeader> {
-    // Initialize an offset, this will be incremented after the reading of each field
-    let mut offset = 0;
-
-    // Read the API key
-    let request_api_key = i16::from_be_bytes(msg_buf[offset..offset + 2].try_into().unwrap());
-    offset += 2;
-
-    // Read the API version
-    let request_api_version = i16::from_be_bytes(msg_buf[offset..offset + 2].try_into().unwrap());
-    offset += 2;
-
-    // Read the correlation id
-    let correlation_id = i32::from_be_bytes(msg_buf[offset..offset + 4].try_into().unwrap());
-    offset += 4;
-
-    // Initialize the client id to a null string
-    let mut client_id: Option<String> = None;
-    // Then read the first two bytes which indicate the length of the string
-    let len_client_id =
-        i16::from_be_bytes(msg_buf[offset..offset + 2].try_into().unwrap()) as usize;
-    offset += 2;
-    match len_client_id {
-        // If the length N is positive then read the next N bytes as client id
-        n if n > 0 => {
-            client_id =
-                Some(String::from_utf8_lossy(&msg_buf[offset..offset + len_client_id]).to_string());
-            offset += len_client_id;
-        }
-        // Else do nothing (in the documentation, null string is indicated by a -1 in the length
-        // field)
-        _ => {}
-    }
-
-    // For now, don't care about parsing the tag buffer
-    let tag_buffer = msg_buf[offset..].to_vec();
-
-    Ok(RequestHeader {
-        request_api_key,
-        request_api_version,
-        correlation_id,
-        client_id,
-        tag_buffer,
-    })
 }
 
 fn main() {
