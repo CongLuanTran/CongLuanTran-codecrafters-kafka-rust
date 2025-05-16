@@ -23,6 +23,7 @@ struct ResponseHeader {
 struct ApiVersionResponse {
     error_code: i16,
     api_keys: Vec<ApiVersion>,
+    throttle_time_ms: i32,
 }
 
 #[derive(Debug)]
@@ -60,6 +61,7 @@ impl ApiVersionResponse {
         for api_key in &self.api_keys {
             buf.extend(api_key.to_be_bytes());
         }
+        buf.extend(self.throttle_time_ms.to_be_bytes());
         buf
     }
 }
@@ -137,6 +139,7 @@ fn handle_connection(mut stream: TcpStream) -> std::io::Result<()> {
             max_version: 4,
             tag_buffer: None,
         }],
+        throttle_time_ms: 0,
     };
     let response = Response {
         header: response_header,
