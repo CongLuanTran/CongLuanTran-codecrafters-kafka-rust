@@ -3,7 +3,7 @@ use crate::protocol::primitive::UnsignedVarint;
 #[derive(Debug)]
 pub struct ApiVersionResponse {
     pub error_code: i16,
-    pub api_keys: Vec<ApiVersion>,
+    pub api_keys: &'static [ApiVersion],
     pub throttle_time_ms: i32,
     pub tag_buffer: Option<Vec<u8>>,
 }
@@ -40,7 +40,7 @@ impl ApiVersionResponse {
         let mut buf = Vec::new();
         buf.extend(self.error_code.to_be_bytes());
         buf.extend(UnsignedVarint(self.api_keys.len() as u32 + 1).encode());
-        for api_key in &self.api_keys {
+        for api_key in self.api_keys {
             buf.extend(api_key.to_be_bytes());
         }
         buf.extend(self.throttle_time_ms.to_be_bytes());

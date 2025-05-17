@@ -11,6 +11,21 @@ use codecrafters_kafka::protocol::{
     response::Response,
 };
 
+const SUPPORTED_API: [ApiVersion; 2] = [
+    ApiVersion {
+        api_key: 18,
+        min_version: 0,
+        max_version: 4,
+        tag_buffer: None,
+    },
+    ApiVersion {
+        api_key: 75,
+        min_version: 0,
+        max_version: 0,
+        tag_buffer: None,
+    },
+];
+
 fn handle_connection(mut stream: TcpStream) -> std::io::Result<()> {
     // First create a buffer to hold message size
     let mut size_buf = [0; 4];
@@ -34,26 +49,11 @@ fn handle_connection(mut stream: TcpStream) -> std::io::Result<()> {
 
                 if request.request_api_key == 18 {
                     let response_header = ResponseHeader { correlation_id };
-                    let (error_code, api_keys) = match request.request_api_version {
-                        4 => (
-                            0,
-                            vec![
-                                ApiVersion {
-                                    api_key: 18,
-                                    min_version: 0,
-                                    max_version: 4,
-                                    tag_buffer: None,
-                                },
-                                ApiVersion {
-                                    api_key: 75,
-                                    min_version: 0,
-                                    max_version: 0,
-                                    tag_buffer: None,
-                                },
-                            ],
-                        ),
-                        _ => (35, vec![]),
-                    };
+                    let (error_code, api_keys): (i16, &[ApiVersion]) =
+                        match request.request_api_version {
+                            4 => (0, &SUPPORTED_API),
+                            _ => (35, &[]),
+                        };
 
                     let response_body = ApiVersionResponse {
                         error_code,
