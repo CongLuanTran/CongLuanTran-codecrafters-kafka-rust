@@ -11,11 +11,14 @@ use codecrafters_kafka::protocol::{
 };
 
 fn handle_connection(mut stream: TcpStream) -> std::io::Result<()> {
-    // First read the message size
+    // First create a buffer to hold message size
     let mut size_buf = [0; 4];
+
+    // Loop until Err is met
     loop {
         match stream.read_exact(&mut size_buf) {
             Ok(_) => {
+                // First read the message size
                 let message_size = i32::from_be_bytes(size_buf) as usize;
 
                 // Then read the rest of the message into a buffer
