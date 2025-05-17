@@ -37,8 +37,8 @@ pub struct TagField {
     pub data: Vec<u8>,
 }
 
-impl TagField {
-    fn encode(&self) -> Vec<u8> {
+impl Serializable for TagField {
+    fn serialize(&self) -> Vec<u8> {
         let mut buf = Vec::new();
         let length = self.data.len() as u32;
         buf.extend(UnsignedVarint(self.tag).encode());
@@ -59,7 +59,7 @@ impl TagSection {
             Some(fields) => {
                 buf.extend(UnsignedVarint(fields.len() as u32 + 1).encode());
                 for field in fields {
-                    buf.extend(field.encode());
+                    buf.extend(field.serialize());
                 }
             }
         }
