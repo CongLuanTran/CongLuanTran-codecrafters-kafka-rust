@@ -6,7 +6,8 @@ use std::{
 };
 
 use codecrafters_kafka::protocol::{
-    apiversion::{ApiVersion, ApiVersionResponse},
+    apiversion::{ApiVersion, ApiVersionsResponse},
+    body::ResponseBody,
     header::{RequestHeader, ResponseHeader},
     primitive::TagSection,
     response::Response,
@@ -43,7 +44,7 @@ fn handle_connection(mut stream: TcpStream) -> std::io::Result<()> {
                 stream.read_exact(&mut msg_buf)?;
 
                 // Parse the request
-                let request = RequestHeader::parse_header(msg_buf).unwrap();
+                let request = RequestHeader::deserialize(msg_buf).unwrap();
 
                 // Send response, this is very unstructured for now, will be refactored later
                 let correlation_id: i32 = request.correlation_id;
@@ -56,12 +57,12 @@ fn handle_connection(mut stream: TcpStream) -> std::io::Result<()> {
                             _ => (35, &[]),
                         };
 
-                    let response_body = ApiVersionResponse {
+                    let response_body = ResponseBody::ApiVersions(ApiVersionsResponse {
                         error_code,
                         api_keys,
                         throttle_time_ms: 0,
                         tag_buffer: TagSection(None),
-                    };
+                    });
                     let response = Response {
                         header: response_header,
                         body: response_body,

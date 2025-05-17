@@ -1,7 +1,10 @@
-use super::primitive::{TagSection, UnsignedVarint};
+use super::{
+    primitive::Serializable,
+    primitive::{TagSection, UnsignedVarint},
+};
 
 #[derive(Debug)]
-pub struct ApiVersionResponse {
+pub struct ApiVersionsResponse {
     pub error_code: i16,
     pub api_keys: &'static [ApiVersion],
     pub throttle_time_ms: i32,
@@ -17,7 +20,7 @@ pub struct ApiVersion {
 }
 
 impl ApiVersion {
-    fn to_be_bytes(&self) -> Vec<u8> {
+    fn serialize(&self) -> Vec<u8> {
         let mut buf = Vec::new();
         buf.extend(self.api_key.to_be_bytes());
         buf.extend(self.min_version.to_be_bytes());
@@ -27,13 +30,13 @@ impl ApiVersion {
     }
 }
 
-impl ApiVersionResponse {
-    pub fn to_be_bytes(&self) -> Vec<u8> {
+impl Serializable for ApiVersionsResponse {
+    fn serialize(&self) -> Vec<u8> {
         let mut buf = Vec::new();
         buf.extend(self.error_code.to_be_bytes());
         buf.extend(UnsignedVarint(self.api_keys.len() as u32 + 1).encode());
         for api_key in self.api_keys {
-            buf.extend(api_key.to_be_bytes());
+            buf.extend(api_key.serialize());
         }
         buf.extend(self.throttle_time_ms.to_be_bytes());
         buf.extend(self.tag_buffer.encode());

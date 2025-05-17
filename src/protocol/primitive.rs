@@ -1,3 +1,7 @@
+pub trait Serializable {
+    fn serialize(&self) -> Vec<u8>;
+}
+
 #[derive(Debug)]
 pub struct UnsignedVarint(pub u32);
 

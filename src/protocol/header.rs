@@ -15,13 +15,13 @@ pub struct ResponseHeader {
 }
 
 impl ResponseHeader {
-    pub fn to_be_bytes(&self) -> [u8; 4] {
+    pub fn serialize(&self) -> [u8; 4] {
         self.correlation_id.to_be_bytes()
     }
 }
 
 impl RequestHeader {
-    pub fn parse_header(msg_buf: Vec<u8>) -> std::io::Result<Self> {
+    pub fn deserialize(msg_buf: Vec<u8>) -> std::io::Result<Self> {
         // Initialize an offset, this will be incremented after the reading of each field
         let mut offset = 0;
 
