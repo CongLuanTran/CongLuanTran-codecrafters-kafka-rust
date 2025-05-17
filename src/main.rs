@@ -2,6 +2,7 @@
 use std::{
     io::{Read, Write},
     net::{TcpListener, TcpStream},
+    thread,
 };
 
 use codecrafters_kafka::protocol::{
@@ -81,9 +82,11 @@ fn main() {
     for stream in listener.incoming() {
         match stream {
             Ok(stream) => {
-                if let Err(e) = handle_connection(stream) {
-                    eprintln!("Failed to write to client: {e}");
-                }
+                thread::spawn(|| {
+                    if let Err(e) = handle_connection(stream) {
+                        eprintln!("Failed to write to client: {e}");
+                    }
+                });
             }
             Err(e) => {
                 println!("error: {}", e);
