@@ -1,4 +1,4 @@
-pub mod apiversion;
+pub mod api_version;
 pub mod body;
 pub mod header;
 pub mod primitive;

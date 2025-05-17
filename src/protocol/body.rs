@@ -1,4 +1,4 @@
-use super::{apiversion::ApiVersionsResponse, primitive::Serializable};
+use super::{api_version::ApiVersionsResponse, primitive::Serializable};
 
 #[derive(Debug)]
 pub enum ResponseBody {

@@ -6,7 +6,7 @@ use std::{
 };
 
 use codecrafters_kafka::protocol::{
-    apiversion::{ApiVersion, ApiVersionsResponse},
+    api_version::{ApiVersion, ApiVersionsResponse},
     body::ResponseBody,
     header::{RequestHeader, ResponseHeader},
     primitive::TagSection,
