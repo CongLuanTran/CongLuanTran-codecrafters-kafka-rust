@@ -8,6 +8,7 @@ use std::{
 use codecrafters_kafka::protocol::{
     apiversion::{ApiVersion, ApiVersionResponse},
     header::{RequestHeader, ResponseHeader},
+    primitive::TagSection,
     response::Response,
 };
 
@@ -16,13 +17,13 @@ const SUPPORTED_API: [ApiVersion; 2] = [
         api_key: 18,
         min_version: 0,
         max_version: 4,
-        tag_buffer: None,
+        tag_buffer: TagSection(None),
     },
     ApiVersion {
         api_key: 75,
         min_version: 0,
         max_version: 0,
-        tag_buffer: None,
+        tag_buffer: TagSection(None),
     },
 ];
 
@@ -59,7 +60,7 @@ fn handle_connection(mut stream: TcpStream) -> std::io::Result<()> {
                         error_code,
                         api_keys,
                         throttle_time_ms: 0,
-                        tag_buffer: None,
+                        tag_buffer: TagSection(None),
                     };
                     let response = Response {
                         header: response_header,
