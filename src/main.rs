@@ -15,7 +15,7 @@ fn handle_connection(mut stream: TcpStream) -> std::io::Result<()> {
     // First create a buffer to hold message size
     let mut size_buf = [0; 4];
 
-    // Loop until Err is met
+    // Loop until connection is terminated (by the cliend or by error)
     loop {
         match stream.read_exact(&mut size_buf) {
             Ok(_) => {
@@ -82,7 +82,9 @@ fn main() {
     for stream in listener.incoming() {
         match stream {
             Ok(stream) => {
+                // Spawn a new thread for each individual connection
                 thread::spawn(|| {
+                    // Each thread handle one connection until the client terminate the connection
                     if let Err(e) = handle_connection(stream) {
                         eprintln!("Failed to write to client: {e}");
                     }
