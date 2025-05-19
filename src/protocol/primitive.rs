@@ -76,7 +76,7 @@ impl Serializable for TagSection {
         match &self.0 {
             None => buf.extend(UnsignedVarint(0).serialize()),
             Some(fields) => {
-                buf.extend(UnsignedVarint(fields.len() as u32 + 1).serialize());
+                buf.extend(UnsignedVarint(fields.len() as u32).serialize());
                 for field in fields {
                     buf.extend(field.serialize());
                 }
