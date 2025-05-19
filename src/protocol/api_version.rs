@@ -1,7 +1,4 @@
-use super::{
-    primitive::Serializable,
-    primitive::{TagSection, UnsignedVarint},
-};
+use super::primitive::{Serializable, TagSection, UnsignedVarint};
 
 #[derive(Debug)]
 pub struct ApiVersionsResponse {
