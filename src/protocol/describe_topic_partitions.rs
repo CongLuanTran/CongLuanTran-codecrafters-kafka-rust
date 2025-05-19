@@ -23,7 +23,7 @@ impl Serializable for TopicRequest {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct TopicResponse {
     pub error_code: i16,
     pub name: CompactString,
@@ -52,20 +52,15 @@ impl Serializable for TopicResponse {
 }
 
 impl TopicResponse {
-    pub fn unkown_topic(name: String) -> Self {
+    pub fn unknown_topic(name: String) -> Self {
         TopicResponse {
-            error_code: 3,
             name: CompactString(Some(name)),
-            topic_id: Uuid::nil(),
-            is_internal: false,
-            partitions: CompactArray::new(),
-            topic_authorized_operations: 0,
-            tag_buffer: TagSection::new(),
+            ..Default::default()
         }
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Partition {
     error_code: i16,
 }

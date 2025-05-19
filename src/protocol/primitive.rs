@@ -101,7 +101,7 @@ impl Serializable for TagSection {
     }
 }
 
-#[derive(Debug, Deref)]
+#[derive(Debug, Deref, Default)]
 pub struct CompactString(pub Option<String>);
 
 impl Serializable for CompactString {
@@ -131,12 +131,6 @@ impl Serializable for CompactString {
 
 #[derive(Debug, Default, Deref)]
 pub struct CompactArray<T: Serializable>(pub Option<Vec<T>>);
-
-impl<T: Serializable> CompactArray<T> {
-    pub fn new() -> Self {
-        CompactArray(Some(vec![]))
-    }
-}
 
 impl<T: Serializable> Serializable for CompactArray<T> {
     fn serialize(&self) -> Vec<u8> {
