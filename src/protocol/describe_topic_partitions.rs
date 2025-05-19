@@ -166,6 +166,7 @@ impl Serializable for DescribeTopicPartitionsRequest {
 
 #[derive(Debug)]
 pub struct DescribeTopicPartitionsResponse {
+    pub header_tag: TagSection,
     pub throttle_time: i32,
     pub topics: CompactArray<TopicResponse>,
     pub next_cursor: Option<Cursor>,
@@ -175,6 +176,7 @@ pub struct DescribeTopicPartitionsResponse {
 impl Serializable for DescribeTopicPartitionsResponse {
     fn serialize(&self) -> Vec<u8> {
         let mut buf = Vec::new();
+        buf.extend(self.header_tag.serialize());
         buf.extend(self.throttle_time.to_be_bytes());
         buf.extend(self.topics.serialize());
         match self.next_cursor {

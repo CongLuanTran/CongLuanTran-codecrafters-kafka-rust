@@ -55,10 +55,7 @@ fn handle_connection(mut stream: TcpStream) -> Result<()> {
 
                 // Send response, this is very unstructured for now, will be refactored later
                 let correlation_id: i32 = request_header.correlation_id;
-                let response_header = ResponseHeader {
-                    correlation_id,
-                    tag_buffer: TagSection(None),
-                };
+                let response_header = ResponseHeader { correlation_id };
 
                 match request_header.request_api_key {
                     18 => {
@@ -94,6 +91,7 @@ fn handle_connection(mut stream: TcpStream) -> Result<()> {
                         }
                         let response_body = ResponseBody::DescribeTopicPartitions(
                             DescribeTopicPartitionsResponse {
+                                header_tag: TagSection(None),
                                 throttle_time: 0,
                                 topics: CompactArray(Some(response_topics)),
                                 next_cursor: None,
