@@ -19,14 +19,17 @@ pub struct ApiVersion {
     pub tag_buffer: TagSection,
 }
 
-impl ApiVersion {
+impl Serializable for ApiVersion {
     fn serialize(&self) -> Vec<u8> {
         let mut buf = Vec::new();
         buf.extend(self.api_key.to_be_bytes());
         buf.extend(self.min_version.to_be_bytes());
         buf.extend(self.max_version.to_be_bytes());
-        buf.extend(self.tag_buffer.encode());
+        buf.extend(self.tag_buffer.serialize());
         buf
+    }
+    fn deserialize(bytes: &[u8]) -> anyhow::Result<(Self, &[u8])> {
+        todo!()
     }
 }
 
@@ -34,12 +37,15 @@ impl Serializable for ApiVersionsResponse {
     fn serialize(&self) -> Vec<u8> {
         let mut buf = Vec::new();
         buf.extend(self.error_code.to_be_bytes());
-        buf.extend(UnsignedVarint(self.api_keys.len() as u32 + 1).encode());
+        buf.extend(UnsignedVarint(self.api_keys.len() as u32 + 1).serialize());
         for api_key in self.api_keys {
             buf.extend(api_key.serialize());
         }
         buf.extend(self.throttle_time_ms.to_be_bytes());
-        buf.extend(self.tag_buffer.encode());
+        buf.extend(self.tag_buffer.serialize());
         buf
+    }
+    fn deserialize(bytes: &[u8]) -> anyhow::Result<(Self, &[u8])> {
+        todo!()
     }
 }

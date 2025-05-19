@@ -9,11 +9,9 @@ use std::{
 use codecrafters_kafka::protocol::{
     api_version::{ApiVersion, ApiVersionsResponse},
     body::ResponseBody,
-    describe_topic_partitions::{
-        DescribeTopicPartitionsRequest, DescribeTopicPartitionsResponse, TopicResponse,
-    },
+    describe_topic_partitions::DescribeTopicPartitionsRequest,
     header::{RequestHeader, ResponseHeader},
-    primitive::{CompactArray, Serializable, TagSection},
+    primitive::{Serializable, TagSection},
     response::Response,
 };
 
@@ -50,9 +48,6 @@ fn handle_connection(mut stream: TcpStream) -> Result<()> {
                 // Parse the request
                 let (request_header, request_body) = RequestHeader::deserialize(&msg_buf)?;
 
-                // Prepare the response
-                let mut response = None;
-
                 // Send response, this is very unstructured for now, will be refactored later
                 let correlation_id: i32 = request_header.correlation_id;
 
@@ -71,47 +66,21 @@ fn handle_connection(mut stream: TcpStream) -> Result<()> {
                             throttle_time_ms: 0,
                             tag_buffer: TagSection(None),
                         });
-                        response = Some(Response {
+                        let response = Response {
                             header: response_header,
                             body: response_body,
-                        });
+                        };
+
+                        let payload = response.to_be_bytes();
+                        let message_size: i32 = payload.len() as i32;
+                        stream.write_all(&message_size.to_be_bytes())?;
+                        stream.write_all(&payload)?;
                     }
                     75 => {
-                        let (request_body, bytes) =
-                            DescribeTopicPartitionsRequest::deserialize(request_body)?;
-                        let response_header = ResponseHeader { correlation_id };
-
-                        let mut response_topics = vec![];
-                        if let Some(topics) = request_body.topics.as_ref() {
-                            for topic in topics {
-                                if let Some(topic_name) = topic.name.as_ref() {
-                                    response_topics
-                                        .push(TopicResponse::unkown_topic(topic_name.clone()))
-                                }
-                            }
-                        }
-                        let response_body = ResponseBody::DescribeTopicPartitions(
-                            DescribeTopicPartitionsResponse {
-                                throttle_time: 0,
-                                topics: CompactArray(Some(response_topics)),
-                                next_cursor: None,
-                                tag_buffer: TagSection(None),
-                            },
-                        );
-
-                        response = Some(Response {
-                            header: response_header,
-                            body: response_body,
-                        });
+                        let request_body =
+                            DescribeTopicPartitionsRequest::deserialize(request_body);
                     }
                     _ => (),
-                }
-
-                if let Some(response) = response {
-                    let payload = response.to_be_bytes();
-                    let message_size: i32 = payload.len() as i32;
-                    stream.write_all(&message_size.to_be_bytes())?;
-                    stream.write_all(&payload)?;
                 }
             }
             Err(e) => {

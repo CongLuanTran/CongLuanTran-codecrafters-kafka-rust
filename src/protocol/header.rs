@@ -1,4 +1,7 @@
 #![allow(dead_code)]
+use anyhow::Result;
+
+use super::primitive::{Serializable, TagSection};
 
 #[derive(Debug)]
 pub struct RequestHeader {
@@ -6,7 +9,7 @@ pub struct RequestHeader {
     pub request_api_version: i16,
     pub correlation_id: i32,
     pub client_id: Option<String>,
-    pub tag_buffer: Vec<u8>,
+    pub tag_buffer: TagSection,
 }
 
 #[derive(Debug)]
@@ -21,7 +24,7 @@ impl ResponseHeader {
 }
 
 impl RequestHeader {
-    pub fn deserialize(msg_buf: Vec<u8>) -> std::io::Result<Self> {
+    pub fn deserialize(msg_buf: &[u8]) -> Result<(Self, &[u8])> {
         // Initialize an offset, this will be incremented after the reading of each field
         let mut offset = 0;
 
@@ -58,14 +61,17 @@ impl RequestHeader {
         }
 
         // For now, don't care about parsing the tag buffer
-        let tag_buffer = msg_buf[offset..].to_vec();
+        let (tag_buffer, body) = TagSection::deserialize(&msg_buf[offset..])?;
 
-        Ok(RequestHeader {
-            request_api_key,
-            request_api_version,
-            correlation_id,
-            client_id,
-            tag_buffer,
-        })
+        Ok((
+            RequestHeader {
+                request_api_key,
+                request_api_version,
+                correlation_id,
+                client_id,
+                tag_buffer,
+            },
+            body,
+        ))
     }
 }
