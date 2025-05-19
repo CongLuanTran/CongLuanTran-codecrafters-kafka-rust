@@ -15,11 +15,15 @@ pub struct RequestHeader {
 #[derive(Debug)]
 pub struct ResponseHeader {
     pub correlation_id: i32,
+    pub tag_buffer: TagSection,
 }
 
 impl ResponseHeader {
-    pub fn serialize(&self) -> [u8; 4] {
-        self.correlation_id.to_be_bytes()
+    pub fn serialize(&self) -> Vec<u8> {
+        let mut buf = vec![];
+        buf.extend(self.correlation_id.to_be_bytes());
+        buf.extend(self.tag_buffer.serialize());
+        buf
     }
 }
 

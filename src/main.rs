@@ -55,10 +55,13 @@ fn handle_connection(mut stream: TcpStream) -> Result<()> {
 
                 // Send response, this is very unstructured for now, will be refactored later
                 let correlation_id: i32 = request_header.correlation_id;
+                let response_header = ResponseHeader {
+                    correlation_id,
+                    tag_buffer: TagSection(None),
+                };
 
                 match request_header.request_api_key {
                     18 => {
-                        let response_header = ResponseHeader { correlation_id };
                         let (error_code, api_keys): (i16, &[ApiVersion]) =
                             match request_header.request_api_version {
                                 4 => (0, &SUPPORTED_API),
@@ -79,7 +82,6 @@ fn handle_connection(mut stream: TcpStream) -> Result<()> {
                     75 => {
                         let (request_body, bytes) =
                             DescribeTopicPartitionsRequest::deserialize(request_body)?;
-                        let response_header = ResponseHeader { correlation_id };
 
                         let mut response_topics = vec![];
                         if let Some(topics) = request_body.topics.as_ref() {
