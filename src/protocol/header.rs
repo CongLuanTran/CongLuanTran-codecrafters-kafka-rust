@@ -13,14 +13,44 @@ pub struct RequestHeader {
 }
 
 #[derive(Debug)]
-pub struct ResponseHeader {
-    pub correlation_id: i32,
+pub enum ResponseHeader {
+    V0(ResponseHeaderV0),
+    V1(ResponseHeaderV1),
 }
 
 impl ResponseHeader {
     pub fn serialize(&self) -> Vec<u8> {
+        match self {
+            ResponseHeader::V0(header) => header.serialize(),
+            ResponseHeader::V1(header) => header.serialize(),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct ResponseHeaderV0 {
+    pub correlation_id: i32,
+}
+
+impl ResponseHeaderV0 {
+    pub fn serialize(&self) -> Vec<u8> {
         let mut buf = vec![];
         buf.extend(self.correlation_id.to_be_bytes());
+        buf
+    }
+}
+
+#[derive(Debug)]
+pub struct ResponseHeaderV1 {
+    pub correlation_id: i32,
+    pub tag_buffer: TagSection,
+}
+
+impl ResponseHeaderV1 {
+    pub fn serialize(&self) -> Vec<u8> {
+        let mut buf = vec![];
+        buf.extend(self.correlation_id.to_be_bytes());
+        buf.extend(self.tag_buffer.serialize());
         buf
     }
 }

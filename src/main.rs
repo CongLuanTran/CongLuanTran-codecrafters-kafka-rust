@@ -12,7 +12,7 @@ use codecrafters_kafka::protocol::{
     describe_topic_partitions::{
         DescribeTopicPartitionsRequest, DescribeTopicPartitionsResponse, TopicResponse,
     },
-    header::{RequestHeader, ResponseHeader},
+    header::{RequestHeader, ResponseHeader, ResponseHeaderV0, ResponseHeaderV1},
     primitive::{CompactArray, Serializable, TagSection},
     response::Response,
 };
@@ -50,15 +50,13 @@ fn handle_connection(mut stream: TcpStream) -> Result<()> {
                 // Parse the request
                 let (request_header, request_body) = RequestHeader::deserialize(&msg_buf)?;
 
-                // Prepare the response
-                let mut response = None;
-
                 // Send response, this is very unstructured for now, will be refactored later
                 let correlation_id: i32 = request_header.correlation_id;
-                let response_header = ResponseHeader { correlation_id };
 
-                match request_header.request_api_key {
+                let response = match request_header.request_api_key {
                     18 => {
+                        let response_header =
+                            ResponseHeader::V0(ResponseHeaderV0 { correlation_id });
                         let (error_code, api_keys): (i16, &[ApiVersion]) =
                             match request_header.request_api_version {
                                 4 => (0, &SUPPORTED_API),
@@ -71,12 +69,16 @@ fn handle_connection(mut stream: TcpStream) -> Result<()> {
                             throttle_time_ms: 0,
                             tag_buffer: TagSection(None),
                         });
-                        response = Some(Response {
+                        Some(Response {
                             header: response_header,
                             body: response_body,
-                        });
+                        })
                     }
                     75 => {
+                        let response_header = ResponseHeader::V1(ResponseHeaderV1 {
+                            correlation_id,
+                            tag_buffer: TagSection(None),
+                        });
                         let (request_body, bytes) =
                             DescribeTopicPartitionsRequest::deserialize(request_body)?;
 
@@ -91,7 +93,6 @@ fn handle_connection(mut stream: TcpStream) -> Result<()> {
                         }
                         let response_body = ResponseBody::DescribeTopicPartitions(
                             DescribeTopicPartitionsResponse {
-                                header_tag: TagSection(None),
                                 throttle_time: 0,
                                 topics: CompactArray(Some(response_topics)),
                                 next_cursor: None,
@@ -99,16 +100,16 @@ fn handle_connection(mut stream: TcpStream) -> Result<()> {
                             },
                         );
 
-                        response = Some(Response {
+                        Some(Response {
                             header: response_header,
                             body: response_body,
-                        });
+                        })
                     }
-                    _ => (),
-                }
+                    _ => None,
+                };
 
-                if let Some(response) = response {
-                    let payload = response.to_be_bytes();
+                if let Some(value) = response {
+                    let payload = value.to_be_bytes();
                     let message_size: i32 = payload.len() as i32;
                     stream.write_all(&message_size.to_be_bytes())?;
                     stream.write_all(&payload)?;
