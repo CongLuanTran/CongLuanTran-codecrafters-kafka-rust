@@ -21,13 +21,43 @@ impl Serializable for UnsignedVarint {
         result
     }
     fn deserialize(bytes: &[u8]) -> Result<(Self, &[u8])> {
-        let mut result: u32 = 0;
+        let mut result = 0;
         let mut shift = 0;
         for (i, byte) in bytes.iter().enumerate() {
             let value = (byte & 0x7F) as u32;
             result |= value << shift;
             if byte & 0x80 == 0 {
                 return Ok((UnsignedVarint(result), &bytes[i + 1..]));
+            }
+            shift += 7;
+        }
+        anyhow::bail!("Failed to deserialize")
+    }
+}
+
+#[derive(Debug)]
+pub struct Varint(pub i32);
+
+impl Serializable for Varint {
+    fn serialize(&self) -> Vec<u8> {
+        let mut result = Vec::new();
+        let mut value = ((self.0 << 1) ^ (self.0 >> 31)) as u32;
+        while value >= 0x80 {
+            result.push((value & 0x7F) as u8 | 0x80);
+            value >>= 7;
+        }
+        result.push(value as u8);
+        result
+    }
+    fn deserialize(bytes: &[u8]) -> Result<(Self, &[u8])> {
+        let mut result = 0;
+        let mut shift = 0;
+        for (i, byte) in bytes.iter().enumerate() {
+            let value = (byte & 0x7F) as i32;
+            result |= value << shift;
+            if byte & 0x80 == 0 {
+                let decode = (result >> 1) ^ -(result & 1);
+                return Ok((Varint(decode), &bytes[i + 1..]));
             }
             shift += 7;
         }
