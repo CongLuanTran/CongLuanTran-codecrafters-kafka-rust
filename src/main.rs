@@ -7,7 +7,7 @@ use std::{
 };
 
 use codecrafters_kafka::protocol::{
-    api_version::{ApiVersion, ApiVersionsResponse},
+    api_version::{ApiVersion, ApiVersionsRequest, ApiVersionsResponse},
     body::ResponseBody,
     describe_topic_partitions::{
         DescribeTopicPartitionsRequest, DescribeTopicPartitionsResponse, TopicResponse,
@@ -16,21 +16,6 @@ use codecrafters_kafka::protocol::{
     primitive::{CompactArray, Serializable, TagSection},
     response::Response,
 };
-
-const SUPPORTED_API: [ApiVersion; 2] = [
-    ApiVersion {
-        api_key: 18,
-        min_version: 0,
-        max_version: 4,
-        tag_buffer: TagSection(None),
-    },
-    ApiVersion {
-        api_key: 75,
-        min_version: 0,
-        max_version: 0,
-        tag_buffer: TagSection(None),
-    },
-];
 
 fn handle_connection(mut stream: TcpStream) -> Result<()> {
     if let Err(e) = process_connection(&mut stream) {
@@ -59,53 +44,11 @@ fn process_connection(stream: &mut TcpStream) -> Result<()> {
 
         // Select the appropriate response based on the API key
         let response = match request_header.request_api_key {
-            18 => {
-                let response_header = ResponseHeader::V0(ResponseHeaderV0 { correlation_id });
-                let (error_code, api_keys): (i16, &[ApiVersion]) =
-                    match request_header.request_api_version {
-                        4 => (0, &SUPPORTED_API),
-                        _ => (35, &[]),
-                    };
-
-                let response_body = ResponseBody::ApiVersions(ApiVersionsResponse {
-                    error_code,
-                    api_keys,
-                    throttle_time_ms: 0,
-                    tag_buffer: TagSection(None),
-                });
-                Some(Response {
-                    header: response_header,
-                    body: response_body,
-                })
-            }
+            18 => ApiVersionsRequest::handle_request(correlation_id, request_header),
             75 => {
-                let response_header = ResponseHeader::V1(ResponseHeaderV1 {
-                    correlation_id,
-                    tag_buffer: TagSection(None),
-                });
                 let (request_body, _bytes) =
                     DescribeTopicPartitionsRequest::deserialize(request_body)?;
-
-                let mut response_topics = vec![];
-                if let Some(topics) = request_body.topics.as_ref() {
-                    for topic in topics {
-                        if let Some(topic_name) = topic.name.as_ref() {
-                            response_topics.push(TopicResponse::unknown_topic(topic_name.clone()))
-                        }
-                    }
-                }
-                let response_body =
-                    ResponseBody::DescribeTopicPartitions(DescribeTopicPartitionsResponse {
-                        throttle_time: 0,
-                        topics: CompactArray(Some(response_topics)),
-                        next_cursor: None,
-                        tag_buffer: TagSection(None),
-                    });
-
-                Some(Response {
-                    header: response_header,
-                    body: response_body,
-                })
+                request_body.handle_request(correlation_id)
             }
             _ => None,
         };

@@ -1,4 +1,9 @@
-use super::primitive::{CompactArray, CompactString, Serializable, TagSection};
+use super::{
+    body::ResponseBody,
+    header::{ResponseHeader, ResponseHeaderV1},
+    primitive::{CompactArray, CompactString, Serializable, TagSection},
+    response::Response,
+};
 use anyhow::{anyhow, Ok, Result};
 use uuid::Uuid;
 
@@ -156,6 +161,36 @@ impl Serializable for DescribeTopicPartitionsRequest {
             },
             bytes,
         ))
+    }
+}
+
+impl DescribeTopicPartitionsRequest {
+    pub fn handle_request(&self, correlation_id: i32) -> Option<Response> {
+        let response_header = ResponseHeader::V1(ResponseHeaderV1 {
+            correlation_id,
+            tag_buffer: TagSection(None),
+        });
+
+        let mut response_topics = vec![];
+        if let Some(topics) = self.topics.as_ref() {
+            for topic in topics {
+                if let Some(topic_name) = topic.name.as_ref() {
+                    response_topics.push(TopicResponse::unknown_topic(topic_name.clone()))
+                }
+            }
+        }
+        let response_body =
+            ResponseBody::DescribeTopicPartitions(DescribeTopicPartitionsResponse {
+                throttle_time: 0,
+                topics: CompactArray(Some(response_topics)),
+                next_cursor: None,
+                tag_buffer: TagSection(None),
+            });
+
+        Some(Response {
+            header: response_header,
+            body: response_body,
+        })
     }
 }
 

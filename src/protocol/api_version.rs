@@ -1,4 +1,52 @@
-use super::primitive::{Serializable, TagSection, UnsignedVarint};
+use crate::protocol::{
+    body::ResponseBody,
+    header::{ResponseHeader, ResponseHeaderV0},
+    response::Response,
+};
+
+use super::{
+    header::RequestHeader,
+    primitive::{Serializable, TagSection, UnsignedVarint},
+};
+
+pub struct ApiVersionsRequest;
+
+impl ApiVersionsRequest {
+    const SUPPORTED_API: [ApiVersion; 2] = [
+        ApiVersion {
+            api_key: 18,
+            min_version: 0,
+            max_version: 4,
+            tag_buffer: TagSection(None),
+        },
+        ApiVersion {
+            api_key: 75,
+            min_version: 0,
+            max_version: 0,
+            tag_buffer: TagSection(None),
+        },
+    ];
+
+    pub fn handle_request(correlation_id: i32, request_header: RequestHeader) -> Option<Response> {
+        let response_header = ResponseHeader::V0(ResponseHeaderV0 { correlation_id });
+        let (error_code, api_keys): (i16, &[ApiVersion]) = match request_header.request_api_version
+        {
+            4 => (0, &Self::SUPPORTED_API),
+            _ => (35, &[]),
+        };
+
+        let response_body = ResponseBody::ApiVersions(ApiVersionsResponse {
+            error_code,
+            api_keys,
+            throttle_time_ms: 0,
+            tag_buffer: TagSection(None),
+        });
+        Some(Response {
+            header: response_header,
+            body: response_body,
+        })
+    }
+}
 
 #[derive(Debug)]
 pub struct ApiVersionsResponse {
