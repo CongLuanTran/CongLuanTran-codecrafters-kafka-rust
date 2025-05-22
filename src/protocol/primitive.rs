@@ -6,7 +6,7 @@ pub trait Serializable: Sized {
     fn deserialize(bytes: &[u8]) -> Result<(Self, &[u8])>;
 }
 
-#[derive(Debug)]
+#[derive(Debug, Deref)]
 pub struct UnsignedVarint(pub u32);
 
 impl Serializable for UnsignedVarint {
